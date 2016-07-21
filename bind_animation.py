@@ -18,10 +18,10 @@
 
 # <pep8 compliant>
 
-import bpy
+import bpy, os
 from mathutils import Vector
 from math import pi
-from .fkik import updateView3D
+from .fkik import updateView3D, isRigify, LimbSwitchPitchipoy, LimbSwitchRigify, isRigifyPitchipoy
 
 def bind_anim(metarig, rig, context):
     # This script is for using the metarig to redirect Mocap animations to the final rig
@@ -41,6 +41,8 @@ def create_mrig(metarig, rig, context):
     
     bpy.ops.object.duplicate()
     newmrig = bpy.data.objects[metarig.name + '.001']
+    newmrig.name = 'mocanimator'
+    newmrig.data.name = 'mocanimator'
     scn.MocanimSrcRig = newmrig.name
     bpy.ops.object.select_all(action = 'DESELECT')
     scn.objects.active = newmrig
@@ -125,10 +127,60 @@ def add_extra_bones_mrig(metarig, rig, context):
     ebones['upper_arm.R'].parent = ebones['shoulder.R.001']
     ebones['upper_arm.R'].use_connect = True
     shoulderR.select = False
-    
+
+    # Add extra foot bones
+    footL = ebones['foot.L']
+    footL.select = True
+    bpy.ops.armature.extrude()
+    ebones['foot.L.001'].name = 'foot_rev.L'
+    ebones['foot_rev.L'].tail = ebones['foot.L'].head
+    ebones['foot_rev.L'].tail[2] = ebones['foot.L'].tail[2]
+    footL.select = False
+
+    footR = ebones['foot.R']
+    footR.select = True
+    bpy.ops.armature.extrude()
+    ebones['foot.R.001'].name = 'foot_rev.R'
+    ebones['foot_rev.R'].tail = ebones['foot.R'].head
+    ebones['foot_rev.R'].tail[2] = ebones['foot.R'].tail[2]
+    footR.select = False
+
+
     bpy.ops.object.mode_set(mode = 'OBJECT')
     bpy.ops.object.select_all(action = 'DESELECT')
-      
+
+def fix_feet(metarig, context):
+
+    scn = context.scene
+    bpy.ops.object.mode_set(mode = 'OBJECT')
+    bpy.ops.object.select_all(action = 'DESELECT')
+
+    scn.objects.active = metarig
+    metarig.select = True
+    bpy.ops.object.mode_set(mode = 'EDIT')
+
+    ebones = metarig.data.edit_bones
+
+    # Add extra foot bones
+    footL = ebones['foot.L']
+    footL.select = True
+    bpy.ops.armature.extrude()
+    ebones['foot.L.001'].name = 'foot_rev.L'
+    ebones['foot_rev.L'].tail = ebones['foot.L'].head
+    ebones['foot_rev.L'].tail[2] = ebones['foot.L'].tail[2]
+    footL.select = False
+
+    footR = ebones['foot.R']
+    footR.select = True
+    bpy.ops.armature.extrude()
+    ebones['foot.R.001'].name = 'foot_rev.R'
+    ebones['foot_rev.R'].tail = ebones['foot.R'].head
+    ebones['foot_rev.R'].tail[2] = ebones['foot.R'].tail[2]
+    footR.select = False
+
+    bpy.ops.object.mode_set(mode = 'OBJECT')
+    bpy.ops.object.select_all(action = 'DESELECT')
+
 def add_cross_constraints(metarig, rig, context):
     # Add Cross Constraints between metarig and rig
     
@@ -148,7 +200,10 @@ def add_cross_constraints(metarig, rig, context):
         constrain_arms(metarig, rig, arms_assoc)
     if scn.MocanimConstrainLegs:
         constrain_legs(metarig, rig, legs_assoc)  
-    
+
+    constrain_ik_legs(metarig, rig, context)
+    constrain_ik_arms(metarig, rig, context)
+
 def deselect_pose_bones(rig):
     # Deselect all pose bones
 
@@ -188,17 +243,18 @@ def constrain_legs(metarig, rig, legs_assoc):
             cns.head_tail = 0
         cns.track_axis = 'TRACK_Y'
         cns.name = cns.name + ' -mcn'
-            
+
 def constrain_spine(metarig, rig, spine_assoc):
     
     mpbones = metarig.pose.bones
     pbones = rig.pose.bones
-    
+    scn = bpy.context.scene
+
     for key in spine_assoc.keys():
         
         pbone = pbones[key]
         
-        if key == 'torso':
+        if key == 'torso' and scn.MocanimConstrainTorso:
             cns = pbone.constraints.new(type = 'COPY_LOCATION')
             cns.target = metarig
             cns.subtarget = spine_assoc[key]
@@ -218,7 +274,7 @@ def constrain_spine(metarig, rig, spine_assoc):
             cns.influence = 0.025
             cns.name = cns.name + ' -mcn'
             
-        elif key == 'hips':
+        elif key == 'hips' and scn.MocanimConstrainHips:
             cns = pbone.constraints.new(type = 'COPY_ROTATION')
             cns.target = metarig
             cns.subtarget = spine_assoc[key]
@@ -232,17 +288,19 @@ def constrain_spine(metarig, rig, spine_assoc):
             cns.influence = 0.33
             cns.owner_space = 'LOCAL'
             cns.target_space = 'LOCAL'
+            cns.mute = not scn.MocanimFollowThigh
             cns.name = cns.name + ' -mcn'
-            
+
             cns = pbone.constraints.new(type = 'COPY_ROTATION')
             cns.target = metarig
             cns.subtarget = 'thigh.R'
             cns.influence = 0.33
             cns.owner_space = 'LOCAL'
             cns.target_space = 'LOCAL'
+            cns.mute = not scn.MocanimFollowThigh
             cns.name = cns.name + ' -mcn'
             
-        elif key == 'chest':
+        elif key == 'chest' and scn.MocanimConstrainChest:
             cns = pbone.constraints.new(type = 'COPY_LOCATION')
             cns.target = metarig
             cns.subtarget = spine_assoc[key]
@@ -305,8 +363,19 @@ def constrain_spine(metarig, rig, spine_assoc):
             cns.max_x = pi
             cns.use_limit_x = True
             cns.owner_space = 'LOCAL'
+            cns.use_limit_z = True
+            if '.L' in key:
+                cns.min_z = -15.0*pi/180
+                cns.max_z = 0.0
+            else:
+                cns.min_z = 0.0
+                cns.max_z = 15.0*pi/180
+            if scn.MocanimUseLimits:
+                cns.mute = False
+            else:
+                cns.mute = True
             cns.name = cns.name + ' -mcn'
-            
+
 def constrain_root(metarig, rig, context):
     mpbones = metarig.pose.bones
     pbones = rig.pose.bones
@@ -334,8 +403,100 @@ def constrain_others(metarig, rig, context):
     mpbones = metarig.pose.bones
     pbones = rig.pose.bones
     scn = context.scene
-    
+
+
     pass
+
+def constrain_ik_legs(metarig, rig, context):
+    mpbones = metarig.pose.bones
+    pbones = rig.pose.bones
+    scn = context.scene
+
+    if 'foot_rev.L' not in mpbones.keys():
+        fix_feet(metarig, context)
+
+    for suffix in [".L", ".R"]:
+        pbone = pbones['thigh_ik' + suffix]
+        cns = pbone.constraints.new(type = 'COPY_LOCATION')
+        cns.target = metarig
+        cns.subtarget = 'thigh' + suffix
+        cns.name = cns.name + ' -mcn'
+        cns = pbone.constraints.new(type = 'DAMPED_TRACK')
+        cns.target = metarig
+        cns.subtarget = 'shin' + suffix
+        cns.name = cns.name + ' -mcn'
+        cns = pbone.constraints.new(type = 'LIMIT_ROTATION')
+        cns.use_limit_z = True
+        if suffix == ".L":
+            cns.min_z = -10.0*pi/180
+            cns.max_z = 0.0
+        else:
+            cns.min_z = 0.0
+            cns.max_z = 10.0*pi/180
+        cns.owner_space = 'LOCAL'
+        cns.mute = True
+        cns.name = cns.name + ' -mcn'
+
+        pbone = pbones['foot_ik' + suffix]
+        cns = pbone.constraints.new(type = 'COPY_LOCATION')
+        cns.target = metarig
+        cns.subtarget = 'foot_rev' + suffix
+        cns.name = cns.name + ' -mcn'
+        cns = pbone.constraints.new(type = 'COPY_ROTATION')
+        cns.target = metarig
+        cns.subtarget = 'foot_rev' + suffix
+        cns.use_x = False
+        cns.use_y =False
+        cns.name = cns.name + ' -mcn'
+        cns = pbone.constraints.new(type = 'LIMIT_LOCATION')
+        cns.use_min_z = True
+        cns.min_z = 0.0
+        cns.use_transform_limit = True
+        if scn.MocanimUseLimits:
+            cns.mute = False
+        else:
+            cns.mute = True
+        cns.name = cns.name + ' -mcn'
+
+        pbone = pbones['foot_heel_ik' + suffix]
+        cns = pbone.constraints.new(type = 'COPY_ROTATION')
+        cns.target = metarig
+        cns.subtarget = 'foot_rev' + suffix
+        cns.name = cns.name + ' -mcn'
+
+def constrain_ik_arms(metarig, rig, context):
+    mpbones = metarig.pose.bones
+    pbones = rig.pose.bones
+    scn = context.scene
+
+    for suffix in [".L", ".R"]:
+        pbone = pbones['upper_arm_ik' + suffix]
+        cns = pbone.constraints.new(type = 'COPY_ROTATION')
+        cns.target = metarig
+        cns.subtarget = 'upper_arm' + suffix
+        cns.owner_space = 'LOCAL'
+        cns.target_space = 'LOCAL'
+        cns.name = cns.name + ' -mcn'
+        cns = pbone.constraints.new(type = 'LIMIT_ROTATION')
+        cns.use_limit_z = True
+        if suffix == ".L":
+            cns.min_z = -10.0*pi/180
+            cns.max_z = 0.0
+        else:
+            cns.min_z = 0.0
+            cns.max_z = 10.0*pi/180
+        cns.owner_space = 'LOCAL'
+        if scn.MocanimUseLimits:
+            cns.mute = False
+        else:
+            cns.mute = True
+        cns.name = cns.name + ' -mcn'
+
+        pbone = pbones['hand_ik' + suffix]
+        cns = pbone.constraints.new(type = 'COPY_TRANSFORMS')
+        cns.target = metarig
+        cns.subtarget = 'hand' + suffix
+        cns.name = cns.name + ' -mcn'
 
 def delete_constraints(metarig, rig, context):
         
@@ -403,8 +564,13 @@ class OBJECT_OT_CreateConstraints(bpy.types.Operator):
         
         add_cross_constraints(mrig, rig, context)
         rig.data.layers = [False, False, False, True, False, False, False, False, True, False, False, True, False, False, True, False, False, True, False, False, False, False, False, False, False, False, False, False, True, False, False, False ]
-        SetSwitchFKIKPitchipoy(rig, scn, 1.0)
-        
+        #SetSwitchFKIKPitchipoy(rig, scn, 1.0)
+
+        if isRigify(rig):
+            LimbSwitchRigify(rig, scn)
+        elif isRigifyPitchipoy(rig):
+            LimbSwitchPitchipoy(rig,scn)
+
         return {'FINISHED'}
     
 class OBJECT_OT_DeleteConstraints(bpy.types.Operator):
@@ -476,7 +642,31 @@ class OBJECT_OT_SelectTarget(bpy.types.Operator):
              scn.MocanimTrgRig = rig.name
         
         return {'FINISHED'}
-    
+
+class OBJECT_OT_ExportBVH(bpy.types.Operator):
+    """ Export Mocanim Metarig to BVH """
+    bl_idname = "mocanim.export_metarig"
+    bl_label = "Export Mocanimator"
+
+    def execute(self,context):
+        scn = context.scene
+        mocanimator = scn.objects[scn.MocanimSrcRig]
+        bpy.ops.object.mode_set(mode = 'OBJECT')
+
+        bpy.ops.object.select_all(action='DESELECT')
+
+        mocanimator.select = True
+
+        bpy.ops.transform.rotate(value=-pi/2, axis=(1,0,0))
+
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+
+        bpy.ops.export_anim.bvh(filepath=scn.MocanimExportPath)
+
+        bpy.ops.object.delete(use_global=False)
+
+        return {'FINISHED'}
+
 def register():
     bpy.utils.register_class(OBJECT_OT_CreateMetarig)
     bpy.utils.register_class(OBJECT_OT_CreateConstraints)
@@ -485,7 +675,8 @@ def register():
     bpy.utils.register_class(OBJECT_OT_DisableConstraints)
     bpy.utils.register_class(OBJECT_OT_SelectSource)
     bpy.utils.register_class(OBJECT_OT_SelectTarget)
-    
+    bpy.utils.register_class(OBJECT_OT_ExportBVH)
+
 def unregister():
     bpy.utils.unregister_class(OBJECT_OT_CreateMetarig)
     bpy.utils.unregister_class(OBJECT_OT_CreateConstraints)
@@ -494,4 +685,5 @@ def unregister():
     bpy.utils.unregister_class(OBJECT_OT_DisableConstraints)
     bpy.utils.unregister_class(OBJECT_OT_SelectSource)
     bpy.utils.unregister_class(OBJECT_OT_SelectTarget)
+    bpy.utils.unregister_class(OBJECT_OT_ExportBVH)
 

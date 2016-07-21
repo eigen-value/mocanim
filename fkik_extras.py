@@ -54,25 +54,43 @@ def tail_distance(angle,bone_ik,bone_fk):
     bone_ik.rotation_mode = rot_mod
     return dv
     
-def find_min_range(bone_ik,bone_fk,f=tail_distance,delta=pi/8):
+def find_min_range(bone_ik,bone_fk,f=tail_distance,delta=pi/4):
     """ finds the range where lies the minimum of function f applied on bone_ik and bone_fk
         at a certain angle.
     """
     rot_mod=bone_ik.rotation_mode
     if rot_mod != 'AXIS_ANGLE':
         bone_ik.rotation_mode = 'AXIS_ANGLE'
- 
+
     start_angle = bone_ik.rotation_axis_angle[0]
-    angle = start_angle-pi
-    while (angle >= (start_angle - pi)) and (angle < (start_angle + pi)):
+    angle = start_angle
+    while (angle >= (start_angle - pi - 2*delta)) and (angle < (start_angle + pi + 2*delta)):
         l_dist = f(angle,bone_ik,bone_fk)
         c_dist = f(angle+delta,bone_ik,bone_fk)
         r_dist = f(angle+2*delta,bone_ik,bone_fk)
         if min((l_dist,c_dist,r_dist)) == c_dist:
             bone_ik.rotation_mode = rot_mod
-            return (angle,angle+2*delta) 
+            return (angle,angle+2*delta)
+        elif max((l_dist,c_dist,r_dist)) == r_dist:
+            angle=angle-delta
         else:
             angle=angle+delta
+
+    # rot_mod=bone_ik.rotation_mode
+    # if rot_mod != 'AXIS_ANGLE':
+    #     bone_ik.rotation_mode = 'AXIS_ANGLE'
+    #
+    # start_angle = bone_ik.rotation_axis_angle[0]
+    # angle = start_angle
+    # while (angle > (start_angle - 2*pi)) and (angle < (start_angle + 2*pi)):
+    #     l_dist = f(angle-delta,bone_ik,bone_fk)
+    #     c_dist = f(angle,bone_ik,bone_fk)
+    #     r_dist = f(angle+delta,bone_ik,bone_fk)
+    #     if min((l_dist,c_dist,r_dist)) == c_dist:
+    #         bone_ik.rotation_mode = rot_mod
+    #         return (angle-delta,angle+delta)
+    #     else:
+    #         angle=angle+delta
 
 def ternarySearch(f, left, right, bone_ik, bone_fk, absolutePrecision):
     """
@@ -212,7 +230,7 @@ def correct_rotation(bone_ik, bone_fk):
     """
     
     alfarange = find_min_range(bone_ik,bone_fk)
-    alfamin = ternarySearch(tail_distance,alfarange[0],alfarange[1],bone_ik,bone_fk,0.1)
+    alfamin = ternarySearch(tail_distance,alfarange[0],alfarange[1],bone_ik,bone_fk,0.5)
     
     rot_mod = bone_ik.rotation_mode
     if rot_mod != 'AXIS_ANGLE':

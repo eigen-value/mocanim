@@ -49,22 +49,53 @@ class OBJECT_OT_KeepPose(bpy.types.Operator):
     def execute(self,context):
         scn = context.scene
 
-        rig = bpy.data.objects[scn.MocanimTrgRig]
+        rig = scn.objects.active #bpy.data.objects[scn.MocanimTrgRig]
 
-#         bpy.ops.object.mode_set(mode = 'POSE')
-#         pbones = rig.pose.bones
-#
-#         bpy.ops.pose.select_all(action='SELECT')
-#         bpy.ops.pose.visual_transform_apply()
+        bpy.ops.object.mode_set(mode = 'POSE')
+        pbones = rig.pose.bones
+
+        # BUG After bake with visual_keying on or after Apply Visual Transform the first ik bones are rescaled
+        bones_to_rescale = [bone.name for bone in pbones if ('thigh_ik' in bone.name or 'upper_arm_ik' in bone.name)and(bone.bone.select)]
+        scales = {}
+        for b in bones_to_rescale:
+            scales[b] = pbones[b].scale.copy()
 
         if scn.MocanimForceInsert:
             bpy.ops.anim.keyframe_insert_menu(type='LocRotScale')
 
         bpy.ops.nla.bake(frame_start=scn.frame_current, frame_end=scn.frame_current, step=1, only_selected=scn.MocanimOnlySelected, visual_keying=True, clear_constraints=not scn.MocanimKeepConstraints, clear_parents=False, use_current_action= not scn.MocanimNewAction, bake_types={'POSE'})
 
+        #Correct scales
+        for b in bones_to_rescale:
+            pbones[b].scale = scales[b]
+            insertKeyFrame(pbones[b])
 
 #         for pb in pbones:
 #             insertKeyFrame(pb)
+        return {'FINISHED'}
+
+class OBJECT_OT_ClearPose(bpy.types.Operator):
+    """Delete current pose for selected bone"""
+    bl_idname = "mocanim.clear_pose"
+    bl_label = "Clear Pose"
+
+    def execute(self, context):
+
+        scn = context.scene
+
+        rig = bpy.data.objects[scn.MocanimTrgRig]
+
+        pbones = rig.pose.bones
+        fcurves = rig.animation_data.action.fcurves
+
+        for pb in pbones:
+            if pb.bone.select == True:
+                for curve in fcurves:
+                    if pb.bone.name in curve.data_path:
+                        if len(curve.keyframe_points) == 1:
+                            fcurves.remove(curve)
+                        else:
+                            pb.keyframe_delete(curve.data_path.split('.')[-1])
 
         return {'FINISHED'}
 
@@ -73,18 +104,62 @@ class OBJECT_OT_KeepAction(bpy.types.Operator):
     bl_idname = "mocanim.keep_action"
     bl_label = "Keep Action"
 
-    def execute(self,context):
+    def execute(self, context):
 
         scn = context.scene
 
+        rig = scn.objects.active #bpy.data.objects[scn.MocanimTrgRig]
+
+        bpy.ops.object.mode_set(mode = 'POSE')
+        pbones = rig.pose.bones
+
+        # BUG After bake with visual_keying on or after Apply Visual Transform the first ik bones are rescaled
+        bones_to_rescale = [bone.name for bone in pbones if ('thigh_ik' in bone.name or 'upper_arm_ik' in bone.name)and(bone.bone.select)]
+        scales = {}
+        for b in bones_to_rescale:
+            scales[b] = pbones[b].scale.copy()
 
         bpy.ops.nla.bake(frame_start=scn.MocanimStartFrame, frame_end=scn.MocanimEndFrame, step=scn.MocanimFrameStep, only_selected=scn.MocanimOnlySelected, visual_keying=True, clear_constraints=not scn.MocanimKeepConstraints, clear_parents=False, use_current_action= not scn.MocanimNewAction, bake_types={'POSE'})
+
+        for f in range(scn.MocanimStartFrame, scn.MocanimEndFrame+1, scn.MocanimFrameStep):
+            for b in bones_to_rescale:
+                scn.frame_set(f)
+                pbones[b].scale = scales[b]
+                pbones[b].keyframe_insert('scale')
+
+        return {'FINISHED'}
+
+class OBJECT_OT_ClearAction(bpy.types.Operator):
+    """Delete current action for selected bone"""
+    bl_idname = "mocanim.clear_action"
+    bl_label = "Clear Action"
+
+    def execute(self, context):
+
+        scn = context.scene
+
+        rig = bpy.data.objects[scn.MocanimTrgRig]
+        pbones = rig.pose.bones
+
+        fcurves=rig.animation_data.action.fcurves
+
+        for pb in pbones:
+            if pb.bone.select:
+                for fcurve in fcurves:
+                    if pb.name in fcurve.data_path:
+                        fcurves.remove(fcurve)
+
+        scn.frame_set(scn.frame_current-1)
+        scn.frame_set(scn.frame_current+1)
+
 
         return {'FINISHED'}
 
 def register():
     bpy.utils.register_class(OBJECT_OT_KeepPose)
     bpy.utils.register_class(OBJECT_OT_KeepAction)
+    bpy.utils.register_class(OBJECT_OT_ClearPose)
+    bpy.utils.register_class(OBJECT_OT_ClearAction)
 
     bpy.types.Scene.MocanimOnlySelected = bpy.props.BoolProperty(name="Only Selected", description="Keep Pose on selected bones only", default=True)
     bpy.types.Scene.MocanimStartFrame = bpy.props.IntProperty(name="Start Frame", description="First Frame to Bake", default=0, min= 0)
@@ -97,3 +172,5 @@ def register():
 def unregister():
     bpy.utils.unregister_class(OBJECT_OT_KeepPose)
     bpy.utils.unregister_class(OBJECT_OT_KeepAction)
+    bpy.utils.unregister_class(OBJECT_OT_ClearPose)
+    bpy.utils.unregister_class(OBJECT_OT_ClearAction)

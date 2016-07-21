@@ -20,6 +20,7 @@
 
 import bpy
 # from mathutils import Vector, Matrix
+import datetime
 from bpy.props import *
 from .utils import *
 from .keyframing import *
@@ -38,8 +39,8 @@ SnapBonesRigifyPitchipoy = {
     "ArmFK" : ["upper_arm_fk", "forearm_fk", "hand_fk"],
     "ArmIK" : ["hand_ik", "upper_arm_ik"],
     "Leg"   : ["thigh", "shin", "foot"],
-    "LegFK" : ["thigh_fk", "shin_fk", "foot_fk"],
-    "LegIK" : ["thigh_ik", "foot_ik", "foot_heel_ik"],
+    "LegFK" : ["thigh_fk", "shin_fk", "foot_fk", "toe"],
+    "LegIK" : ["thigh_ik", "foot_ik", "foot_heel_ik", "toe"],
 }
 
 
@@ -54,10 +55,14 @@ def FktoIkRigify(rig,scn):
 def IktoFkRigify(rig,scn):
     pass
 
-def FktoIkPitchipoy(rig,scn):
+def FktoIkPitchipoy(rig,scn, window='ALL'):
     from .fkik_extras import ik2fk_arm, ik2fk_leg
-    
-    frames = getKeyedFrames(rig)
+
+    if window == 'ALL':
+        frames = getKeyedFrames(rig)
+        frames = [f for f in frames if f in range(scn.MocanimTransferStartFrame, scn.MocanimTransferEndFrame+1)]
+    elif window == 'CURRENT':
+        frames = [scn.frame_current]
     
     for f in frames:
         scn.frame_set(f)
@@ -74,10 +79,11 @@ def FktoIkPitchipoy(rig,scn):
                 ik = [uarmi,farmi,handi]
                 ik2fk_arm(rig, fk, ik)
 
-                insertKeyFrame(rig.pose.bones[uarmi])
-                insertKeyFrame(rig.pose.bones[farmi])
-                insertKeyFrame(rig.pose.bones[handi])
-                
+                # insertKeyFrame(rig.pose.bones[uarmi])
+                # insertKeyFrame(rig.pose.bones[farmi])
+                # insertKeyFrame(rig.pose.bones[handi])
+
+
                 print('arm' + suffix)
                 
         if scn.MocanimFkIkLegs:
@@ -99,14 +105,16 @@ def FktoIkPitchipoy(rig,scn):
                 updateView3D()
                 ik2fk_leg(rig, fk, ik)
 
-                insertKeyFrame(rig.pose.bones[thighi])
-                insertKeyFrame(rig.pose.bones[shini])
-                insertKeyFrame(rig.pose.bones[footi])
-                insertKeyFrame(rig.pose.bones[footroll])
-                insertKeyFrame(rig.pose.bones[mfooti])
+                # insertKeyFrame(rig.pose.bones[thighi])
+                # insertKeyFrame(rig.pose.bones[shini])
+                # insertKeyFrame(rig.pose.bones[footi])
+                # insertKeyFrame(rig.pose.bones[footroll])
+                # insertKeyFrame(rig.pose.bones[mfooti])
 
                 print('leg' + suffix)
-                
+
+        bpy.ops.nla.bake(frame_start=f, frame_end=f, step=1, only_selected=scn.MocanimTransferOnlySelected, visual_keying=True, clear_constraints=False, clear_parents=False, use_current_action= True, bake_types={'POSE'})
+
     for suffix in [".L", ".R"]:
         if scn.MocanimFkIkArms:
             rig.pose.bones["MCH-upper_arm_parent"+suffix]["IK/FK"] = 0.0
@@ -115,10 +123,14 @@ def FktoIkPitchipoy(rig,scn):
             rig.pose.bones["MCH-thigh_parent"+suffix]["IK/FK"] = 0.0
             updateView3D()
             
-def IktoFkPitchipoy(rig,scn):
+def IktoFkPitchipoy(rig,scn, window='ALL'):
     from .fkik_extras import fk2ik_arm, fk2ik_leg
 
-    frames = getKeyedFrames(rig)
+    if window == 'ALL':
+        frames = getKeyedFrames(rig)
+        frames = [f for f in frames if f in range(scn.MocanimTransferStartFrame, scn.MocanimTransferEndFrame+1)]
+    elif window == 'CURRENT':
+        frames = [scn.frame_current]
     
     for f in frames:
         scn.frame_set(f)
@@ -135,9 +147,9 @@ def IktoFkPitchipoy(rig,scn):
                 ik = [uarmi,farmi,handi]
                 fk2ik_arm(rig, fk, ik)
 
-                insertKeyFrame(rig.pose.bones[uarm])
-                insertKeyFrame(rig.pose.bones[farm])
-                insertKeyFrame(rig.pose.bones[hand])
+                # insertKeyFrame(rig.pose.bones[uarm])
+                # insertKeyFrame(rig.pose.bones[farm])
+                # insertKeyFrame(rig.pose.bones[hand])
 
         if scn.MocanimFkIkLegs:
             for suffix in [".L", ".R"]:
@@ -154,10 +166,12 @@ def IktoFkPitchipoy(rig,scn):
                 ik = [thighi,shini,footi,mfooti]
                 fk2ik_leg(rig, fk, ik)
 
-                insertKeyFrame(rig.pose.bones[thigh])
-                insertKeyFrame(rig.pose.bones[shin])
-                insertKeyFrame(rig.pose.bones[foot])
-                insertKeyFrame(rig.pose.bones[mfoot])
+                # insertKeyFrame(rig.pose.bones[thigh])
+                # insertKeyFrame(rig.pose.bones[shin])
+                # insertKeyFrame(rig.pose.bones[foot])
+                # insertKeyFrame(rig.pose.bones[mfoot])
+
+        bpy.ops.nla.bake(frame_start=f, frame_end=f, step=1, only_selected=scn.MocanimTransferOnlySelected, visual_keying=True, clear_constraints=False, clear_parents=False, use_current_action= True, bake_types={'POSE'})
 
 
     for suffix in [".L", ".R"]:
@@ -240,13 +254,61 @@ def clearAnimation(rig, scn, act, type, snapBones):
     bpy.ops.pose.scale_clear()
     
     updateView3D()
-    
+
+class OBJECT_OT_IK2FK(bpy.types.Operator):
+    """ Snaps IK limb on FK limb at current frame"""
+    bl_idname = "mocanim.ik2fk"
+    bl_label = "IK2FK"
+    bl_description = "Snaps IK limb on FK"
+
+    def execute(self,context):
+        scn = context.scene
+        rig = context.object
+
+        if isRigify(rig):
+            FktoIkRigify(rig, scn)
+        elif isRigifyPitchipoy(rig):
+            FktoIkPitchipoy(rig,scn, window='CURRENT')
+
+        rig.data.layers = [False, False, False, True, False, False, False, True, False, False, True, False, False, True, False, False, True, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False]
+
+        return {'FINISHED'}
+
+class OBJECT_OT_FK2IK(bpy.types.Operator):
+    """ Snaps FK limb on IK limb at current frame"""
+    bl_idname = "mocanim.fk2ik"
+    bl_label = "FK2IK"
+    bl_description = "Snaps FK limb on IK"
+
+    def execute(self,context):
+        scn = context.scene
+        rig = context.object
+
+        if isRigify(rig):
+            IktoFkRigify(rig, scn)
+        elif isRigifyPitchipoy(rig):
+            IktoFkPitchipoy(rig,scn, window='CURRENT')
+        return {'FINISHED'}
+
 class OBJECT_OT_TransferFKtoIK(bpy.types.Operator):
     """Transfers FK animation to IK"""
     bl_idname = "mocanim.transfer_fk_to_ik"
     bl_label = "Transfer FK anim to IK"
     bl_description = "Transfer FK animation to IK bones"
-    
+
+    expected_time = StringProperty(name = 'Estimated Time (H:M:S):', default = '')
+
+    def invoke(self,context,event):
+
+        rig=context.object
+
+        frames = len(getKeyedFrames(rig))
+        time_sec = 5*frames
+
+        self.expected_time = str(datetime.timedelta(seconds=time_sec))
+
+        return context.window_manager.invoke_props_dialog(self)
+
     def execute(self,context):
         scn = context.scene
         rig = context.object
@@ -254,7 +316,7 @@ class OBJECT_OT_TransferFKtoIK(bpy.types.Operator):
         if isRigify(rig):
             FktoIkRigify(rig, scn)
         elif isRigifyPitchipoy(rig):
-            FktoIkPitchipoy(rig,scn)
+            FktoIkPitchipoy(rig,scn,window='ALL')
         
         rig.data.layers = [False, False, False, True, False, False, False, True, False, False, True, False, False, True, False, False, True, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False]        
         
@@ -273,7 +335,7 @@ class OBJECT_OT_TransferIKtoFK(bpy.types.Operator):
         if isRigify(rig):
             IktoFkRigify(rig, scn)
         elif isRigifyPitchipoy(rig):
-            IktoFkPitchipoy(rig,scn)
+            IktoFkPitchipoy(rig,scn, window='ALL')
         
         return {'FINISHED'}
 
@@ -327,12 +389,19 @@ class OBJECT_OT_ClearAnimation(bpy.types.Operator):
 
 
 def register():
+    bpy.utils.register_class(OBJECT_OT_IK2FK)
+    bpy.utils.register_class(OBJECT_OT_FK2IK)
     bpy.utils.register_class(OBJECT_OT_TransferFKtoIK)
     bpy.utils.register_class(OBJECT_OT_TransferIKtoFK)
     bpy.utils.register_class(OBJECT_OT_ClearAnimation)
     bpy.utils.register_class(OBJECT_OT_LimbSwitch)
-    
+    bpy.types.Scene.MocanimTransferStartFrame = bpy.props.IntProperty(name="Start Frame", description="First Frame to Transfer", default=0, min= 0)
+    bpy.types.Scene.MocanimTransferEndFrame = bpy.props.IntProperty(name="End Frame", description="Last Frame to Transfer", default=0, min= 0)
+    bpy.types.Scene.MocanimTransferOnlySelected = bpy.props.BoolProperty(name="Transfer Only Selected", description="Transfer selected bones only", default=False)
+
 def unregister():
+    bpy.utils.unregister_class(OBJECT_OT_IK2FK)
+    bpy.utils.unregister_class(OBJECT_OT_FK2IK)
     bpy.utils.unregister_class(OBJECT_OT_TransferFKtoIK)
     bpy.utils.unregister_class(OBJECT_OT_TransferIKtoFK)
     bpy.utils.unregister_class(OBJECT_OT_ClearAnimation)
