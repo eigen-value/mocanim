@@ -40,7 +40,7 @@ class VIEW3D_PT_meta_bvh(bpy.types.Panel):
         row.operator('mocanim.export_metarig',text='Export Metarig to BVH', icon = 'EXPORT')
         row = layout.row(align=True)
         row.prop(scn, "MocanimExportPath")
-        row.operator('mocanim.export_path', text='', icon = 'FILESEL')
+        #row.operator('mocanim.export_path', text='', icon = 'FILESEL')
 
 class VIEW3D_PT_bind_animation(bpy.types.Panel):
     bl_label = "Create Constraints"

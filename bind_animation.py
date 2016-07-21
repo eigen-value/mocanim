@@ -72,8 +72,8 @@ def add_extra_bones_mrig(metarig, rig, context):
     scn.objects.active = rig
     metarig.select = True
     bpy.ops.object.mode_set(mode = 'EDIT')
-    chest_pos = rig.data.edit_bones['chest'].head
-    torso_pos = rig.data.edit_bones['torso'].head
+    chest_pos = rig.data.edit_bones['chest'].head.copy()
+    torso_pos = rig.data.edit_bones['torso'].head.copy()
     
     bpy.ops.object.mode_set(mode = 'OBJECT')
     bpy.ops.object.select_all(action = 'DESELECT')
@@ -661,7 +661,20 @@ class OBJECT_OT_ExportBVH(bpy.types.Operator):
 
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
 
-        bpy.ops.export_anim.bvh(filepath=scn.MocanimExportPath)
+        if scn.MocanimExportPath == '//./':
+            path = bpy.data.filepath.split('/')
+            fname = path[-1]
+            name = fname.split('.')
+            name = '.'.join(name[0:-1])
+            name = name + '.bvh'
+            path.pop()
+            path.append(name)
+            pathandname = '/'.join(path)
+        else:
+            pathandname = bpy.path.abspath(scn.MocanimExportPath)
+
+        bpy.ops.export_anim.bvh(filepath=pathandname)
+
 
         bpy.ops.object.delete(use_global=False)
 
@@ -686,4 +699,3 @@ def unregister():
     bpy.utils.unregister_class(OBJECT_OT_SelectSource)
     bpy.utils.unregister_class(OBJECT_OT_SelectTarget)
     bpy.utils.unregister_class(OBJECT_OT_ExportBVH)
-
