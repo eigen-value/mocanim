@@ -89,10 +89,10 @@ class OBJECT_OT_KeepPose(bpy.types.Operator):
             bpy.ops.anim.keyframe_insert_menu(type='WholeCharacter')
             for pb in pbones:
                 insertKeyFrame(pb)
-                if pb.name in bones_to_rescale:
-                    pb.scale = scales[pb.name]
-                bpy.ops.anim.keyframe_insert_menu(type='Scaling')
-                insertKeyFrame(pb)
+                # if pb.name in bones_to_rescale:
+                #     pb.scale = scales[pb.name]
+                # bpy.ops.anim.keyframe_insert_menu(type='Scaling')
+                # insertKeyFrame(pb)
 
 
         #Correct scales
