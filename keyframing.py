@@ -60,18 +60,57 @@ class OBJECT_OT_KeepPose(bpy.types.Operator):
         for b in bones_to_rescale:
             scales[b] = pbones[b].scale.copy()
 
-        if scn.MocanimForceInsert:
-            bpy.ops.anim.keyframe_insert_menu(type='LocRotScale')
+        # Saving bones rotation
+        rotations = {}
+        for pb in pbones:
+            if pb.rotation_mode == 'QUATERNION':
+                rotations[pb.name] = pb.rotation_quaternion.copy()
+            elif pb.rotation_mode == 'AXIS_ANGLE':
+                rotations[pb.name] = pb.rotation_axis_angle.copy()
+            else:
+                rotations[pb.name] = pb.rotation_euler.copy()
 
-        bpy.ops.nla.bake(frame_start=scn.frame_current, frame_end=scn.frame_current, step=1, only_selected=scn.MocanimOnlySelected, visual_keying=True, clear_constraints=not scn.MocanimKeepConstraints, clear_parents=False, use_current_action= not scn.MocanimNewAction, bake_types={'POSE'})
+        # if scn.MocanimForceInsert:
+        #     bpy.ops.anim.keyframe_insert_menu(type='LocRotScale')
+
+        # bpy.ops.nla.bake(frame_start=scn.frame_current, frame_end=scn.frame_current, step=1, only_selected=scn.MocanimOnlySelected, visual_keying=False, clear_constraints=not scn.MocanimKeepConstraints, clear_parents=False, use_current_action= not scn.MocanimNewAction, bake_types={'POSE'})
+
+        if scn.MocanimOnlySelected:
+            bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_VisualLocRot')
+            for pb in pbones:
+                if pb.bone.select:
+                    insertKeyFrame(pb)
+            bpy.ops.anim.keyframe_insert_menu(type='Scaling')
+            for pb in pbones:
+                if pb.bone.select:
+                    insertKeyFrame(pb)
+
+        else:
+            bpy.ops.anim.keyframe_insert_menu(type='WholeCharacter')
+            for pb in pbones:
+                insertKeyFrame(pb)
+                if pb.name in bones_to_rescale:
+                    pb.scale = scales[pb.name]
+                bpy.ops.anim.keyframe_insert_menu(type='Scaling')
+                insertKeyFrame(pb)
+
 
         #Correct scales
-        for b in bones_to_rescale:
-            pbones[b].scale = scales[b]
-            insertKeyFrame(pbones[b])
 
-#         for pb in pbones:
-#             insertKeyFrame(pb)
+        # for b in bones_to_rescale:
+        #     pbones[b].scale = scales[b]
+        #     scn.update()
+        #     insertKeyFrame(pbones[b])
+        #
+        # # Correct Rotations
+        # for pb in pbones:
+        #     if pb.rotation_mode == 'QUATERNION':
+        #         pb.rotation_quaternion = rotations[pb.name]
+        #     elif pb.rotation_mode == 'AXIS_ANGLE':
+        #         pb.rotation_axis_angle = rotations[pb.name]
+        #     else:
+        #         pb.rotation_euler = rotations[pb.name]
+
         return {'FINISHED'}
 
 class OBJECT_OT_ClearPose(bpy.types.Operator):

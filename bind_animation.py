@@ -224,6 +224,8 @@ def constrain_arms(metarig, rig, arms_assoc):
         cns.target = metarig
         cns.subtarget = arms_assoc[key]
         cns.name = cns.name + ' -mcn'
+        cns.target_space = 'WORLD'
+        cns.owner_space = 'POSE'
             
 def constrain_legs(metarig, rig, legs_assoc):
     
@@ -265,6 +267,8 @@ def constrain_spine(metarig, rig, spine_assoc):
             cns.subtarget = spine_assoc[key]
             cns.use_y = False
             cns.name = cns.name + ' -mcn'
+            cns.target_space = 'WORLD'
+            cns.owner_space = 'POSE'
             
             cns = pbone.constraints.new(type = 'DAMPED_TRACK')
             cns.target = metarig
@@ -305,6 +309,15 @@ def constrain_spine(metarig, rig, spine_assoc):
             cns.target = metarig
             cns.subtarget = spine_assoc[key]
             cns.name = cns.name + ' -mcn'
+
+            cns = pbone.constraints.new(type = 'COPY_ROTATION')
+            cns.target = metarig
+            cns.subtarget = spine_assoc[key]
+            cns.name = cns.name + ' -mcn'
+            cns.use_x = False
+            cns.use_y = False
+            cns.target_space = 'WORLD'
+            cns.owner_space = 'POSE'
             
             cns = pbone.constraints.new(type = 'DAMPED_TRACK')
             cns.target = metarig
@@ -326,12 +339,25 @@ def constrain_spine(metarig, rig, spine_assoc):
             cns.target = metarig
             cns.subtarget = spine_assoc[key]
             cns.name = cns.name + ' -mcn'
+            cns.target_space = 'WORLD'
+            cns.owner_space = 'POSE'
+
+            cns = pbone.constraints.new(type = 'COPY_ROTATION')
+            cns.target = metarig
+            cns.subtarget = spine_assoc['head']
+            cns.name = cns.name + ' -mcn'
+            cns.use_y = False
+            cns.target_space = 'WORLD'
+            cns.owner_space = 'POSE'
+            cns.influence = 0.25
             
         elif key == 'head':
             cns = pbone.constraints.new(type = 'COPY_ROTATION')
             cns.target = metarig
             cns.subtarget = spine_assoc[key]
             cns.name = cns.name + ' -mcn'
+            cns.target_space = 'WORLD'
+            cns.owner_space = 'POSE'
             
         elif 'shoulder' in key:
             cns = pbone.constraints.new(type = 'COPY_ROTATION')
@@ -425,6 +451,14 @@ def constrain_ik_legs(metarig, rig, context):
         cns.target = metarig
         cns.subtarget = 'shin' + suffix
         cns.name = cns.name + ' -mcn'
+        cns = pbone.constraints.new(type = 'COPY_ROTATION')
+        cns.target = metarig
+        cns.subtarget = 'thigh' + suffix
+        cns.name = cns.name + ' -mcn'
+        cns.use_x = False
+        cns.use_z = False
+        cns.target_space = 'WORLD'
+        cns.owner_space = 'POSE'
         cns = pbone.constraints.new(type = 'LIMIT_ROTATION')
         cns.use_limit_z = True
         if suffix == ".L":
@@ -448,6 +482,8 @@ def constrain_ik_legs(metarig, rig, context):
         cns.use_x = False
         cns.use_y =False
         cns.name = cns.name + ' -mcn'
+        cns.target_space = 'WORLD'
+        cns.owner_space = 'POSE'
         cns = pbone.constraints.new(type = 'LIMIT_LOCATION')
         cns.use_min_z = True
         cns.min_z = 0.0
@@ -463,6 +499,8 @@ def constrain_ik_legs(metarig, rig, context):
         cns.target = metarig
         cns.subtarget = 'foot_rev' + suffix
         cns.name = cns.name + ' -mcn'
+        cns.target_space = 'WORLD'
+        cns.owner_space = 'POSE'
 
 def constrain_ik_arms(metarig, rig, context):
     mpbones = metarig.pose.bones
