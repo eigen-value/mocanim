@@ -86,9 +86,12 @@ class OBJECT_OT_KeepPose(bpy.types.Operator):
                     insertKeyFrame(pb)
 
         else:
-            bpy.ops.anim.keyframe_insert_menu(type='WholeCharacter')
-            for pb in pbones:
-                insertKeyFrame(pb)
+            bpy.ops.nla.bake(frame_start=scn.frame_current, frame_end=scn.frame_current, step=1, only_selected=scn.MocanimOnlySelected, visual_keying=True, clear_constraints=not scn.MocanimKeepConstraints, clear_parents=False, use_current_action= not scn.MocanimNewAction, bake_types={'POSE'})
+
+
+            # bpy.ops.anim.keyframe_insert_menu(type='WholeCharacter')
+            # for pb in pbones:
+            #     insertKeyFrame(pb)
                 # if pb.name in bones_to_rescale:
                 #     pb.scale = scales[pb.name]
                 # bpy.ops.anim.keyframe_insert_menu(type='Scaling')
