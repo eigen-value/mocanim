@@ -75,18 +75,13 @@ class OBJECT_OT_KeepPose(bpy.types.Operator):
 
         # bpy.ops.nla.bake(frame_start=scn.frame_current, frame_end=scn.frame_current, step=1, only_selected=scn.MocanimOnlySelected, visual_keying=False, clear_constraints=not scn.MocanimKeepConstraints, clear_parents=False, use_current_action= not scn.MocanimNewAction, bake_types={'POSE'})
 
-        if scn.MocanimOnlySelected:
-            bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_VisualLocRot')
-            for pb in pbones:
-                if pb.bone.select:
-                    insertKeyFrame(pb)
-            bpy.ops.anim.keyframe_insert_menu(type='Scaling')
-            for pb in pbones:
-                if pb.bone.select:
-                    insertKeyFrame(pb)
+        if not scn.MocanimOnlySelected:
+            bpy.ops.pose.select_all(action='SELECT')
 
-        else:
-            bpy.ops.nla.bake(frame_start=scn.frame_current, frame_end=scn.frame_current, step=1, only_selected=scn.MocanimOnlySelected, visual_keying=True, clear_constraints=not scn.MocanimKeepConstraints, clear_parents=False, use_current_action= not scn.MocanimNewAction, bake_types={'POSE'})
+        bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_VisualLocRot')
+        bpy.ops.anim.keyframe_insert_menu(type='Scaling')
+
+        #bpy.ops.nla.bake(frame_start=scn.frame_current, frame_end=scn.frame_current, step=1, only_selected=scn.MocanimOnlySelected, visual_keying=True, clear_constraints=not scn.MocanimKeepConstraints, clear_parents=False, use_current_action= not scn.MocanimNewAction, bake_types={'POSE'})
 
 
             # bpy.ops.anim.keyframe_insert_menu(type='WholeCharacter')
@@ -155,19 +150,21 @@ class OBJECT_OT_KeepAction(bpy.types.Operator):
         bpy.ops.object.mode_set(mode = 'POSE')
         pbones = rig.pose.bones
 
-        # BUG After bake with visual_keying on or after Apply Visual Transform the first ik bones are rescaled
-        bones_to_rescale = [bone.name for bone in pbones if ('thigh_ik' in bone.name or 'upper_arm_ik' in bone.name)and(bone.bone.select)]
-        scales = {}
-        for b in bones_to_rescale:
-            scales[b] = pbones[b].scale.copy()
+        if scn.MocanimNewAction:
+            newaction = bpy.data.actions.new(rig.animation_data.action.name)
+            rig.animation_data.action = newaction
 
-        bpy.ops.nla.bake(frame_start=scn.MocanimStartFrame, frame_end=scn.MocanimEndFrame, step=scn.MocanimFrameStep, only_selected=scn.MocanimOnlySelected, visual_keying=True, clear_constraints=not scn.MocanimKeepConstraints, clear_parents=False, use_current_action= not scn.MocanimNewAction, bake_types={'POSE'})
+        if not scn.MocanimOnlySelected:
+            bpy.ops.pose.select_all(action='SELECT')
 
         for f in range(scn.MocanimStartFrame, scn.MocanimEndFrame+1, scn.MocanimFrameStep):
-            for b in bones_to_rescale:
-                scn.frame_set(f)
-                pbones[b].scale = scales[b]
-                pbones[b].keyframe_insert('scale')
+            scn.frame_set(f)
+            bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_VisualLocRot')
+            bpy.ops.anim.keyframe_insert_menu(type='Scaling')
+
+        if not scn.MocanimKeepConstraints:
+            bpy.ops.mocanim.delete_constraints()
+
 
         return {'FINISHED'}
 
@@ -197,11 +194,26 @@ class OBJECT_OT_ClearAction(bpy.types.Operator):
 
         return {'FINISHED'}
 
+class OBJECT_OT_GetFrameRange(bpy.types.Operator):
+    """Get start and end frame range"""
+    bl_idname = "mocanim.get_frame_range"
+    bl_label = "Get Frame Range"
+
+    def execute(self,context):
+
+        scn = context.scene
+
+        scn.MocanimStartFrame = scn.frame_start
+        scn.MocanimEndFrame = scn.frame_end
+
+        return {'FINISHED'}
+
 def register():
     bpy.utils.register_class(OBJECT_OT_KeepPose)
     bpy.utils.register_class(OBJECT_OT_KeepAction)
     bpy.utils.register_class(OBJECT_OT_ClearPose)
     bpy.utils.register_class(OBJECT_OT_ClearAction)
+    bpy.utils.register_class(OBJECT_OT_GetFrameRange)
 
     bpy.types.Scene.MocanimOnlySelected = bpy.props.BoolProperty(name="Only Selected", description="Keep Pose on selected bones only", default=True)
     bpy.types.Scene.MocanimStartFrame = bpy.props.IntProperty(name="Start Frame", description="First Frame to Bake", default=0, min= 0)
@@ -209,10 +221,11 @@ def register():
     bpy.types.Scene.MocanimFrameStep = bpy.props.IntProperty(name="Frame Step", description="Bake Frame Step", default=1, min= 1)
     bpy.types.Scene.MocanimNewAction = bpy.props.BoolProperty(name="Create New Action", description="Bake bvh mocap into new Action", default=False)
     bpy.types.Scene.MocanimKeepConstraints = bpy.props.BoolProperty(name="Keep Constraints", description="Keep Constraints after Bake", default=True)
-    bpy.types.Scene.MocanimForceInsert = bpy.props.BoolProperty(name="Force Insert", description="Force keyframe on all channels", default=True)
+    #bpy.types.Scene.MocanimForceInsert = bpy.props.BoolProperty(name="Force Insert", description="Force keyframe on all channels", default=True)
 
 def unregister():
     bpy.utils.unregister_class(OBJECT_OT_KeepPose)
     bpy.utils.unregister_class(OBJECT_OT_KeepAction)
     bpy.utils.unregister_class(OBJECT_OT_ClearPose)
     bpy.utils.unregister_class(OBJECT_OT_ClearAction)
+    bpy.utils.unregister_class(OBJECT_OT_GetFrameRange)

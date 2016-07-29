@@ -168,8 +168,8 @@ class VIEW3D_PT_keyframing(bpy.types.Panel):
         
         row = layout.row(align=True)
         row.prop(scn, "MocanimOnlySelected")
-        row.prop(scn, "MocanimForceInsert")
-        row = layout.row(align=True)
+        #row.prop(scn, "MocanimForceInsert")
+        #row = layout.row(align=True)
         row.prop(scn, "MocanimKeepConstraints")
         row = layout.row(align=True)
         row.operator("mocanim.keep_pose", icon = 'KEY_HLT')
@@ -180,6 +180,7 @@ class VIEW3D_PT_keyframing(bpy.types.Panel):
         row = layout.row(align=True)
         row.prop(scn,"MocanimStartFrame")
         row.prop(scn,"MocanimEndFrame")
+        row.operator("mocanim.get_frame_range", icon='TIME', text='')
         row = layout.row(align=True)
         row.prop(scn,"MocanimFrameStep")
         row = layout.row(align=True)
