@@ -35,6 +35,8 @@ if "bpy" in locals():
     imp.reload(fkik)
     imp.reload(utils)
 
+# THIS IS A SILLY COMMENT
+
 else:
     import bpy
     from . import ui
