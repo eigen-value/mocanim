@@ -112,8 +112,9 @@ def FktoIkPitchipoy(rig,scn, window='ALL'):
                 # insertKeyFrame(rig.pose.bones[mfooti])
 
                 print('leg' + suffix)
-
-        bpy.ops.nla.bake(frame_start=f, frame_end=f, step=1, only_selected=scn.MocanimTransferOnlySelected, visual_keying=True, clear_constraints=False, clear_parents=False, use_current_action= True, bake_types={'POSE'})
+        bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_VisualLocRot')
+        bpy.ops.anim.keyframe_insert_menu(type='Scaling')
+        #bpy.ops.nla.bake(frame_start=f, frame_end=f, step=1, only_selected=scn.MocanimTransferOnlySelected, visual_keying=True, clear_constraints=False, clear_parents=False, use_current_action= True, bake_types={'POSE'})
 
     for suffix in [".L", ".R"]:
         if scn.MocanimFkIkArms:
@@ -170,8 +171,9 @@ def IktoFkPitchipoy(rig,scn, window='ALL'):
                 # insertKeyFrame(rig.pose.bones[shin])
                 # insertKeyFrame(rig.pose.bones[foot])
                 # insertKeyFrame(rig.pose.bones[mfoot])
-
-        bpy.ops.nla.bake(frame_start=f, frame_end=f, step=1, only_selected=scn.MocanimTransferOnlySelected, visual_keying=True, clear_constraints=False, clear_parents=False, use_current_action= True, bake_types={'POSE'})
+        bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_VisualLocRot')
+        bpy.ops.anim.keyframe_insert_menu(type='Scaling')
+        #bpy.ops.nla.bake(frame_start=f, frame_end=f, step=1, only_selected=scn.MocanimTransferOnlySelected, visual_keying=True, clear_constraints=False, clear_parents=False, use_current_action= True, bake_types={'POSE'})
 
 
     for suffix in [".L", ".R"]:
@@ -387,6 +389,19 @@ class OBJECT_OT_ClearAnimation(bpy.types.Operator):
             context.user_preferences.edit.use_global_undo = use_global_undo
         return{'FINISHED'}
 
+class OBJECT_OT_GetTransferFrameRange(bpy.types.Operator):
+    """Get start and end frame range"""
+    bl_idname = "mocanim.get_transfer_frame_range"
+    bl_label = "Get Frame Range For Transfer"
+
+    def execute(self,context):
+
+        scn = context.scene
+
+        scn.MocanimTransferStartFrame = scn.frame_start
+        scn.MocanimTransferEndFrame = scn.frame_end
+
+        return {'FINISHED'}
 
 def register():
     bpy.utils.register_class(OBJECT_OT_IK2FK)
@@ -395,6 +410,7 @@ def register():
     bpy.utils.register_class(OBJECT_OT_TransferIKtoFK)
     bpy.utils.register_class(OBJECT_OT_ClearAnimation)
     bpy.utils.register_class(OBJECT_OT_LimbSwitch)
+    bpy.utils.register_class(OBJECT_OT_GetTransferFrameRange)
     bpy.types.Scene.MocanimTransferStartFrame = bpy.props.IntProperty(name="Start Frame", description="First Frame to Transfer", default=0, min= 0)
     bpy.types.Scene.MocanimTransferEndFrame = bpy.props.IntProperty(name="End Frame", description="Last Frame to Transfer", default=0, min= 0)
     bpy.types.Scene.MocanimTransferOnlySelected = bpy.props.BoolProperty(name="Transfer Only Selected", description="Transfer selected bones only", default=False)
@@ -406,3 +422,4 @@ def unregister():
     bpy.utils.unregister_class(OBJECT_OT_TransferIKtoFK)
     bpy.utils.unregister_class(OBJECT_OT_ClearAnimation)
     bpy.utils.unregister_class(OBJECT_OT_LimbSwitch)
+    bpy.utils.unregister_class(OBJECT_OT_GetTransferFrameRange)

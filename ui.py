@@ -216,6 +216,7 @@ class VIEW3D_PT_transfer_animation(bpy.types.Panel):
         row = layout.row(align=True)
         row.prop(scn, 'MocanimTransferStartFrame')
         row.prop(scn, 'MocanimTransferEndFrame')
+        row.operator("mocanim.get_transfer_frame_range", icon='TIME', text='')
         # if not scn.MocanimTransferOnlySelected:
         #     row = layout.row(align=True)
         #     row.prop(scn, "MocanimFkIkArms")
