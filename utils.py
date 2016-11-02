@@ -18,6 +18,24 @@
 
 # <pep8 compliant>
 
+def isArmName(name):
+    identifiers=['hand', 'arm']
+
+    for id in identifiers:
+        if id in name:
+            return True
+
+    return False
+
+def isLegName(name):
+    identifiers=['thigh', 'foot']
+
+    for id in identifiers:
+        if id in name:
+            return True
+
+    return False
+
 def isRigify(rig):
     try:
         rig.pose.bones['MCH-spine.flex']

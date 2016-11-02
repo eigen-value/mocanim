@@ -83,8 +83,8 @@ def FktoIkPitchipoy(rig,scn, window='ALL'):
                 # insertKeyFrame(rig.pose.bones[farmi])
                 # insertKeyFrame(rig.pose.bones[handi])
 
-
-                print('arm' + suffix)
+                bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_VisualLocRot')
+                bpy.ops.anim.keyframe_insert_menu(type='Scaling')
                 
         if scn.MocanimFkIkLegs:
             for suffix in [".L", ".R"]:
@@ -111,9 +111,8 @@ def FktoIkPitchipoy(rig,scn, window='ALL'):
                 # insertKeyFrame(rig.pose.bones[footroll])
                 # insertKeyFrame(rig.pose.bones[mfooti])
 
-                print('leg' + suffix)
-        bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_VisualLocRot')
-        bpy.ops.anim.keyframe_insert_menu(type='Scaling')
+                bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_VisualLocRot')
+                bpy.ops.anim.keyframe_insert_menu(type='Scaling')
         #bpy.ops.nla.bake(frame_start=f, frame_end=f, step=1, only_selected=scn.MocanimTransferOnlySelected, visual_keying=True, clear_constraints=False, clear_parents=False, use_current_action= True, bake_types={'POSE'})
 
     for suffix in [".L", ".R"]:
@@ -232,6 +231,7 @@ def clearAnimation(rig, scn, act, type, snapBones):
         for bname in snapBones["Arm" + type]:
             if bname is not None:
                 ikBones += [bname+".L", bname+".R"]
+
     if scn.MocanimFkIkLegs:
         for bname in snapBones["Leg" + type]:
             if bname is not None:

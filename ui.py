@@ -22,6 +22,7 @@ from .bind_animation import *
 from .keyframing import *
 from .fkik import *
 from _sqlite3 import Row
+from .utils import isArmName, isLegName
 
 class VIEW3D_PT_meta_bvh(bpy.types.Panel):
     bl_label = "Metarig to BVH"
@@ -41,6 +42,7 @@ class VIEW3D_PT_meta_bvh(bpy.types.Panel):
         row = layout.row(align=True)
         row.prop(scn, "MocanimExportPath")
         #row.operator('mocanim.export_path', text='', icon = 'FILESEL')
+
 
 class VIEW3D_PT_bind_animation(bpy.types.Panel):
     bl_label = "Create Constraints"
@@ -94,6 +96,7 @@ class VIEW3D_PT_bind_animation(bpy.types.Panel):
             layout.prop(scn, "MocanimConstrainLegs")
             layout.prop(scn, 'MocanimUseLimits')
 
+
 class VIEW3D_PT_constraint_limits(bpy.types.Panel):
     bl_label = "Constraint Limits"
     bl_space_type = "VIEW_3D"
@@ -114,27 +117,49 @@ class VIEW3D_PT_constraint_limits(bpy.types.Panel):
         pbones = rig.pose.bones
         layout = self.layout
 
+        armbox = layout.box()
+        armbox.label(text='ARM Constraint Limits')
+        legbox = layout.box()
+        legbox.label(text='LEG Constraint Limits')
+
         if rig.mode == 'POSE':
 
             for pb in pbones:
                 for cns in pb.constraints:
+
+                    if isArmName(pb.name):
+                        box = armbox
+                    elif isLegName(pb.name):
+                        box = legbox
+                    else:
+                        continue
+
+                    if ('IK' in cns.name):
+                        box = box.box()
+                        row = box.row(align=True)
+                        row.label(pb.name + ': ' + cns.name)
+                        row.prop(cns, 'pole_angle')
+                        row = box.row(align=False)
+                        row.separator()
+
                     if ('Limit' in cns.name) and ('-mcn' in cns.name):
-                        box = layout.box()
-                        row = box.row(align = True)
+                        # box = layout.box()
+                        box = box.box()
+                        row = box.row(align=True)
                         row.label(pb.name + ': ' + cns.name)
                         #row.prop(cns, 'mute')
                         if cns.mute:
-                            row.prop(cns, 'mute', icon = 'VISIBLE_IPO_OFF',emboss= False, icon_only=True)
+                            row.prop(cns, 'mute', icon='VISIBLE_IPO_OFF', emboss= False, icon_only=True)
                         else:
-                            row.prop(cns, 'mute', icon = 'VISIBLE_IPO_ON',emboss=False, icon_only=True)
+                            row.prop(cns, 'mute', icon='VISIBLE_IPO_ON', emboss=False, icon_only=True)
 
                         if 'Rotation' in cns.name:
-                            row = box.row(align = False)
-                            col = row.column(align = True)
+                            row = box.row(align=False)
+                            col = row.column(align=True)
                             col.prop(cns, 'use_limit_x')
                             col.prop(cns, 'min_x', text='Min')
                             col.prop(cns, 'max_x', text='Max')
-                            col = row.column(align = True)
+                            col = row.column(align=True)
                             col.prop(cns, 'use_limit_y')
                             col.prop(cns, 'min_y',text='Min')
                             col.prop(cns, 'max_y', text='Max')
@@ -143,12 +168,13 @@ class VIEW3D_PT_constraint_limits(bpy.types.Panel):
                             col.prop(cns, 'min_z',text='Min')
                             col.prop(cns, 'max_z', text='Max')
                         elif 'Location' in cns.name:
-                            col = box.column(align = True)
+                            col = box.column(align=True)
                             col.prop(cns, 'use_min_z')
                             col.prop(cns, 'min_z',text='')
                             col.prop(cns, 'use_transform_limit')
-                        row = box.row(align = False)
+                        row = box.row(align=False)
                         row.separator()
+
 
 class VIEW3D_PT_keyframing(bpy.types.Panel):
     bl_label = "Keyframing"
@@ -186,6 +212,7 @@ class VIEW3D_PT_keyframing(bpy.types.Panel):
         row = layout.row(align=True)
         row.prop(scn,"MocanimNewAction")
 
+
 class VIEW3D_PT_transfer_animation(bpy.types.Panel):
     bl_label = "Transfer Animation"
     bl_space_type = "VIEW_3D"
@@ -222,6 +249,7 @@ class VIEW3D_PT_transfer_animation(bpy.types.Panel):
         #     row.prop(scn, "MocanimFkIkArms")
         #     row.prop(scn, "MocanimFkIkLegs")
 
+
 class VIEW3D_PT_fk_ik(bpy.types.Panel):
     bl_label = "FK/IK"
     bl_space_type = "VIEW_3D"
@@ -249,6 +277,7 @@ class VIEW3D_PT_fk_ik(bpy.types.Panel):
         row = layout.row(align=True)
         row.operator("mocanim.limb_switch", icon = "FILE_REFRESH")
 
+
 def register():
 
     bpy.utils.register_class(VIEW3D_PT_meta_bvh)
@@ -257,7 +286,8 @@ def register():
     bpy.utils.register_class(VIEW3D_PT_keyframing)
     bpy.utils.register_class(VIEW3D_PT_transfer_animation)
     bpy.utils.register_class(VIEW3D_PT_fk_ik)
-    
+
+
 def unregister():
 
     bpy.utils.unregister_class(VIEW3D_PT_meta_bvh)

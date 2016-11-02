@@ -22,13 +22,15 @@ import bpy, os
 from mathutils import Vector
 from math import pi
 from .fkik import updateView3D, isRigify, LimbSwitchPitchipoy, LimbSwitchRigify, isRigifyPitchipoy
+from .utils import isLegName, isArmName
 
 def bind_anim(metarig, rig, context):
     # This script is for using the metarig to redirect Mocap animations to the final rig
     # Works on Pitchipoy rigs only
     create_mrig(metarig, rig, context)
     add_cross_constraints(metarig, rig, context)
-    
+
+
 def create_mrig(metarig, rig, context):
     
     # Clean metarig from unwanted bones
@@ -61,7 +63,8 @@ def create_mrig(metarig, rig, context):
         
     bpy.ops.armature.delete()
     add_extra_bones_mrig(newmrig, rig, context)
-        
+
+
 def add_extra_bones_mrig(metarig, rig, context):
     # add more bones to metarig for animation retargeting
     
@@ -149,6 +152,7 @@ def add_extra_bones_mrig(metarig, rig, context):
     bpy.ops.object.mode_set(mode = 'OBJECT')
     bpy.ops.object.select_all(action = 'DESELECT')
 
+
 def fix_feet(metarig, context):
 
     scn = context.scene
@@ -181,6 +185,7 @@ def fix_feet(metarig, context):
     bpy.ops.object.mode_set(mode = 'OBJECT')
     bpy.ops.object.select_all(action = 'DESELECT')
 
+
 def add_cross_constraints(metarig, rig, context):
     # Add Cross Constraints between metarig and rig
     
@@ -204,12 +209,14 @@ def add_cross_constraints(metarig, rig, context):
     constrain_ik_legs(metarig, rig, context)
     constrain_ik_arms(metarig, rig, context)
 
+
 def deselect_pose_bones(rig):
     # Deselect all pose bones
 
     pbones = rig.pose.bones
     for pbone in pbones:
         pbone.bone.select = False
+
 
 def constrain_arms(metarig, rig, arms_assoc):
     
@@ -226,7 +233,8 @@ def constrain_arms(metarig, rig, arms_assoc):
         cns.name = cns.name + ' -mcn'
         cns.target_space = 'WORLD'
         cns.owner_space = 'POSE'
-            
+
+
 def constrain_legs(metarig, rig, legs_assoc):
     
     mpbones = metarig.pose.bones
@@ -245,6 +253,7 @@ def constrain_legs(metarig, rig, legs_assoc):
             cns.head_tail = 0
         cns.track_axis = 'TRACK_Y'
         cns.name = cns.name + ' -mcn'
+
 
 def constrain_spine(metarig, rig, spine_assoc):
     
@@ -402,6 +411,7 @@ def constrain_spine(metarig, rig, spine_assoc):
                 cns.mute = True
             cns.name = cns.name + ' -mcn'
 
+
 def constrain_root(metarig, rig, context):
     mpbones = metarig.pose.bones
     pbones = rig.pose.bones
@@ -425,6 +435,7 @@ def constrain_root(metarig, rig, context):
     cns.target_space = 'LOCAL'
     cns.name = cns.name + ' -mcn'
 
+
 def constrain_others(metarig, rig, context):
     mpbones = metarig.pose.bones
     pbones = rig.pose.bones
@@ -432,6 +443,7 @@ def constrain_others(metarig, rig, context):
 
 
     pass
+
 
 def constrain_ik_legs(metarig, rig, context):
     mpbones = metarig.pose.bones
@@ -502,6 +514,13 @@ def constrain_ik_legs(metarig, rig, context):
         cns.target_space = 'WORLD'
         cns.owner_space = 'POSE'
 
+        pbone = pbones['MCH-thigh_ik' + suffix]
+        cns = pbone.constraints['IK']
+        cns.pole_target = metarig
+        cns.pole_subtarget = 'shin' + suffix
+        cns.pole_angle = -pi/2
+
+
 def constrain_ik_arms(metarig, rig, context):
     mpbones = metarig.pose.bones
     pbones = rig.pose.bones
@@ -536,6 +555,13 @@ def constrain_ik_arms(metarig, rig, context):
         cns.subtarget = 'hand' + suffix
         cns.name = cns.name + ' -mcn'
 
+        pbone = pbones['MCH-upper_arm_ik' + suffix]
+        cns = pbone.constraints['IK']
+        cns.pole_target = metarig
+        cns.pole_subtarget = 'forearm' + suffix
+        cns.pole_angle = -pi/2
+
+
 def delete_constraints(metarig, rig, context):
         
         scn = context.scene      
@@ -543,8 +569,13 @@ def delete_constraints(metarig, rig, context):
         
         for pbone in pbones:
             for cns in pbone.constraints:
-                if '-mcn' in cns.name:
+                if 'IK' in cns.name:
+                    cns.pole_target = None
+                    cns.pole_subtarget = ''
+                    cns.pole_angle = 0
+                elif '-mcn' in cns.name:
                     pbone.constraints.remove(cns)
+
 
 def enable_constraints(metarig, rig, context):
         scn = context.scene
@@ -552,8 +583,18 @@ def enable_constraints(metarig, rig, context):
 
         for pbone in pbones:
             for cns in pbone.constraints:
+                if 'IK' in cns.name:
+                    cns.pole_target = metarig
+                    suffix = pbone.name[-2:]
+                    if isArmName(pbone.name):
+                        name = 'forearm'+suffix
+                    elif isLegName(pbone.name):
+                        name = 'shin'+suffix
+                    cns.pole_subtarget = name
+                    cns.pole_angle = -pi/2
                 if '-mcn' in cns.name:
                     cns.mute = False
+
 
 def disable_constraints(metarig, rig, context):
         scn = context.scene
@@ -561,8 +602,13 @@ def disable_constraints(metarig, rig, context):
 
         for pbone in pbones:
             for cns in pbone.constraints:
-                if '-mcn' in cns.name:
+                if 'IK' in cns.name:
+                    cns.pole_target = None
+                    cns.pole_subtarget = ''
+                    cns.pole_angle = 0
+                elif '-mcn' in cns.name:
                     cns.mute = True
+
 
 def SetSwitchFKIKPitchipoy(rig, scn, val):
         
