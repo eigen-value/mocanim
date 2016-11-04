@@ -118,9 +118,9 @@ class VIEW3D_PT_constraint_limits(bpy.types.Panel):
         layout = self.layout
 
         armbox = layout.box()
-        armbox.label(text='ARM Constraint Limits')
+        armbox.label(text='ARMS Constraint Limits')
         legbox = layout.box()
-        legbox.label(text='LEG Constraint Limits')
+        legbox.label(text='LEGS Constraint Limits')
 
         if rig.mode == 'POSE':
 
@@ -134,7 +134,7 @@ class VIEW3D_PT_constraint_limits(bpy.types.Panel):
                     else:
                         continue
 
-                    if ('IK' in cns.name):
+                    if ('ik' in cns.type.lower()):
                         box = box.box()
                         row = box.row(align=True)
                         row.label(pb.name + ': ' + cns.name)
@@ -142,7 +142,7 @@ class VIEW3D_PT_constraint_limits(bpy.types.Panel):
                         row = box.row(align=False)
                         row.separator()
 
-                    if ('Limit' in cns.name) and ('-mcn' in cns.name):
+                    if ('limit' in cns.type.lower()) and ('-mcn' in cns.name):
                         # box = layout.box()
                         box = box.box()
                         row = box.row(align=True)

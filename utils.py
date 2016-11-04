@@ -19,7 +19,7 @@
 # <pep8 compliant>
 
 def isArmName(name):
-    identifiers=['hand', 'arm']
+    identifiers=['hand', 'arm', 'shoulder']
 
     for id in identifiers:
         if id in name:
