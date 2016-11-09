@@ -104,9 +104,30 @@ def add_extra_bones_mrig(metarig, rig, context):
     bpy.ops.armature.bone_primitive_add(name="chest_hook")
     chest_hook = ebones['chest_hook']
     chest_hook.head = chest_pos
-    chest_hook.tail = chest_hook.head + Vector((0.0,0.21,0.0))
+    chest_hook.tail = chest_hook.head + Vector((0.0, 0.21, 0.0))
     chest_hook.parent = spine1
-    
+
+    # Add a Chest Hook .001 bone
+    bpy.ops.armature.bone_primitive_add(name="chest_hook")
+    chest_hook = ebones[-1]
+    chest_hook.head = spine2.head.copy()
+    chest_hook.tail = chest_hook.head + Vector((0.0, spine2.length, 0.0))
+    chest_hook.parent = spine2
+
+    # Add a Chest Hook .002 bone
+    bpy.ops.armature.bone_primitive_add(name="chest_hook")
+    chest_hook = ebones[-1]
+    chest_hook.head = spine3.head.copy()
+    chest_hook.tail = chest_hook.head + Vector((0.0, spine3.length, 0.0))
+    chest_hook.parent = spine3
+
+    # Add a Spine Target
+    bpy.ops.armature.bone_primitive_add(name="spine_target")
+    chest_hook = ebones[-1]
+    chest_hook.head = (ebones['shoulder.L'].head + ebones['shoulder.R'].head + spine3.tail)/3
+    chest_hook.tail = chest_hook.head + Vector((0.0, 0.21, 0.0))
+    chest_hook.parent = spine3
+
     # Add a Root bone
     bpy.ops.armature.bone_primitive_add(name="root")
     root = ebones['root']
@@ -148,6 +169,33 @@ def add_extra_bones_mrig(metarig, rig, context):
     ebones['foot_rev.R'].tail[2] = ebones['foot.R'].tail[2]
     footR.select = False
 
+    # Add thigh POLES
+    bpy.ops.armature.bone_primitive_add(name="thigh_POLE.L")
+    thigh_pole = ebones[-1]
+    thigh_pole.tail = ebones['thigh.L'].tail.copy()
+    thigh_pole.head = ebones['thigh.L'].tail - Vector((0.0, ebones['thigh.L'].length, 0.0))/2
+    thigh_pole.parent = ebones['thigh.L']
+
+    bpy.ops.armature.bone_primitive_add(name="thigh_POLE.R")
+    thigh_pole = ebones[-1]
+    thigh_pole.tail = ebones['thigh.R'].tail.copy()
+    thigh_pole.head = ebones['thigh.R'].tail - Vector((0.0, ebones['thigh.R'].length, 0.0))/2
+    thigh_pole.parent = ebones['thigh.R']
+
+    # Add upper_arm POLES
+    bpy.ops.armature.bone_primitive_add(name="upper_arm_POLE.L")
+    thigh_pole = ebones[-1]
+    thigh_pole.tail = ebones['upper_arm.L'].tail.copy()
+    thigh_pole.head = ebones['upper_arm.L'].tail + Vector((0.0, ebones['upper_arm.L'].length, 0.0))/2
+    thigh_pole.roll = thigh_pole.z_axis.angle(-ebones['upper_arm.L'].y_axis)
+    thigh_pole.parent = ebones['upper_arm.L']
+
+    bpy.ops.armature.bone_primitive_add(name="upper_arm_POLE.R")
+    thigh_pole = ebones[-1]
+    thigh_pole.tail = ebones['upper_arm.R'].tail.copy()
+    thigh_pole.head = ebones['upper_arm.R'].tail + Vector((0.0, ebones['upper_arm.R'].length, 0.0))/2
+    thigh_pole.roll = thigh_pole.z_axis.angle(ebones['upper_arm.R'].y_axis)
+    thigh_pole.parent = ebones['upper_arm.R']
 
     bpy.ops.object.mode_set(mode = 'OBJECT')
     bpy.ops.object.select_all(action = 'DESELECT')
@@ -330,17 +378,24 @@ def constrain_spine(metarig, rig, spine_assoc):
             
             cns = pbone.constraints.new(type = 'DAMPED_TRACK')
             cns.target = metarig
-            cns.subtarget = 'spine.005' #mpbones[spine_assoc[key]].parent.name #spine.005?
-            cns.track_axis = 'TRACK_Z'
+            cns.subtarget = 'shoulder.R' #mpbones[spine_assoc[key]].parent.name #spine.005?
+            cns.track_axis = 'TRACK_NEGATIVE_X'
             cns.head_tail = 0
             cns.name = cns.name + ' -mcn'
             
             cns = pbone.constraints.new(type = 'DAMPED_TRACK')
             cns.target = metarig
-            cns.subtarget = 'spine.005' #mpbones[spine_assoc[key]].parent.name #spine.005?
-            cns.track_axis = 'TRACK_Z'
-            cns.head_tail = 1
+            cns.subtarget = 'shoulder.L' #mpbones[spine_assoc[key]].parent.name #spine.005?
+            cns.track_axis = 'TRACK_X'
+            cns.head_tail = 0
             cns.influence = 0.5
+            cns.name = cns.name + ' -mcn'
+
+            cns = pbone.constraints.new(type = 'DAMPED_TRACK')
+            cns.target = metarig
+            cns.subtarget = 'spine_target' #mpbones[spine_assoc[key]].parent.name #spine.005?
+            cns.track_axis = 'TRACK_Z'
+            cns.head_tail = 0.25
             cns.name = cns.name + ' -mcn'
             
         elif key == 'neck':
@@ -428,11 +483,11 @@ def constrain_root(metarig, rig, context):
     
     cns = pbone.constraints.new(type = 'COPY_ROTATION')
     cns.target = metarig
-    cns.subtarget = 'root'
+    cns.subtarget = 'spine'
     cns.use_x = False
     cns.use_y = False
     cns.owner_space = 'LOCAL'
-    cns.target_space = 'LOCAL'
+    cns.target_space = 'WORLD'
     cns.name = cns.name + ' -mcn'
 
 
@@ -517,7 +572,7 @@ def constrain_ik_legs(metarig, rig, context):
         pbone = pbones['MCH-thigh_ik' + suffix]
         cns = pbone.constraints['IK']
         cns.pole_target = metarig
-        cns.pole_subtarget = 'shin' + suffix
+        cns.pole_subtarget = 'thigh_POLE' + suffix
         cns.pole_angle = -pi/2
 
 
@@ -558,7 +613,7 @@ def constrain_ik_arms(metarig, rig, context):
         pbone = pbones['MCH-upper_arm_ik' + suffix]
         cns = pbone.constraints['IK']
         cns.pole_target = metarig
-        cns.pole_subtarget = 'forearm' + suffix
+        cns.pole_subtarget = 'upper_arm_POLE' + suffix
         cns.pole_angle = -pi/2
 
 
@@ -587,9 +642,9 @@ def enable_constraints(metarig, rig, context):
                     cns.pole_target = metarig
                     suffix = pbone.name[-2:]
                     if isArmName(pbone.name):
-                        name = 'forearm'+suffix
+                        name = 'upper_arm_POLE'+suffix
                     elif isLegName(pbone.name):
-                        name = 'shin'+suffix
+                        name = 'thigh_POLE'+suffix
                     cns.pole_subtarget = name
                     cns.pole_angle = -pi/2
                 if '-mcn' in cns.name:

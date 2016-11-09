@@ -121,6 +121,8 @@ class VIEW3D_PT_constraint_limits(bpy.types.Panel):
         armbox.label(text='ARMS Constraint Limits')
         legbox = layout.box()
         legbox.label(text='LEGS Constraint Limits')
+        othersbox = layout.box()
+        othersbox.label(text='SPINE Constraint Limits')
 
         if rig.mode == 'POSE':
 
@@ -132,7 +134,7 @@ class VIEW3D_PT_constraint_limits(bpy.types.Panel):
                     elif isLegName(pb.name):
                         box = legbox
                     else:
-                        continue
+                        box = othersbox
 
                     if ('ik' in cns.type.lower()):
                         box = box.box()
@@ -174,6 +176,12 @@ class VIEW3D_PT_constraint_limits(bpy.types.Panel):
                             col.prop(cns, 'use_transform_limit')
                         row = box.row(align=False)
                         row.separator()
+
+                    if ('damped' in cns.type.lower()) and ('-mcn' in cns.name) and ('spine_target' in cns.subtarget):
+                        box = box.box()
+                        row = box.row(align=True)
+                        row.label(pb.name + ': ' + cns.name)
+                        row.prop(cns, 'head_tail')
 
 
 class VIEW3D_PT_keyframing(bpy.types.Panel):
