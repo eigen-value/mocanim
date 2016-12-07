@@ -21,7 +21,7 @@
 import bpy
 
 def getKeyedFrames(rig):
-    frames=[]
+    frames = []
     if rig.animation_data:
         if rig.animation_data.action:
             fcus = rig.animation_data.action.fcurves
@@ -208,11 +208,45 @@ class OBJECT_OT_GetFrameRange(bpy.types.Operator):
 
         return {'FINISHED'}
 
+class OBJECT_OT_UpdateAction(bpy.types.Operator):
+    """Update Inserted keyframes in selected range"""
+    bl_idname = "mocanim.update_action"
+    bl_label = "Update Action"
+
+    def execute(self, context):
+        bpy.ops.object.mode_set(mode='POSE')
+
+        scn = context.scene
+        rig = scn.objects.active #bpy.data.objects[scn.MocanimTrgRig]
+        pbones = rig.pose.bones
+
+        fcurves=rig.animation_data.action.fcurves
+
+        if not scn.MocanimOnlySelected:
+            bpy.ops.pose.select_all(action='DESELECT')
+            for pb in pbones:
+                for fcurve in fcurves:
+                    if pb.name in fcurve.data_path:
+                        pb.bone.select = True
+
+        frames = getKeyedFrames(rig)
+        for f in frames:
+            if scn.MocanimStartFrame <= f <= scn.MocanimEndFrame:
+                scn.frame_set(f)
+                bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_VisualLocRot')
+                bpy.ops.anim.keyframe_insert_menu(type='Scaling')
+
+        if not scn.MocanimKeepConstraints:
+            bpy.ops.mocanim.delete_constraints()
+
+        return {'FINISHED'}
+
 def register():
     bpy.utils.register_class(OBJECT_OT_KeepPose)
     bpy.utils.register_class(OBJECT_OT_KeepAction)
     bpy.utils.register_class(OBJECT_OT_ClearPose)
     bpy.utils.register_class(OBJECT_OT_ClearAction)
+    bpy.utils.register_class(OBJECT_OT_UpdateAction)
     bpy.utils.register_class(OBJECT_OT_GetFrameRange)
 
     bpy.types.Scene.MocanimOnlySelected = bpy.props.BoolProperty(name="Only Selected", description="Keep Pose on selected bones only", default=True)
@@ -227,5 +261,6 @@ def unregister():
     bpy.utils.unregister_class(OBJECT_OT_KeepPose)
     bpy.utils.unregister_class(OBJECT_OT_KeepAction)
     bpy.utils.unregister_class(OBJECT_OT_ClearPose)
+    bpy.utils.unregister_class(OBJECT_OT_ClearAction)
     bpy.utils.unregister_class(OBJECT_OT_ClearAction)
     bpy.utils.unregister_class(OBJECT_OT_GetFrameRange)
