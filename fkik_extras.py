@@ -39,6 +39,7 @@ def rotation_difference(mat1, mat2):
         angle = -angle + (2*pi)
     return angle
 
+
 def tail_distance(angle,bone_ik,bone_fk):
     """ Returns the distance between the tails of two bones
         after rotating bone_ik in AXIS_ANGLE mode.
@@ -53,7 +54,8 @@ def tail_distance(angle,bone_ik,bone_fk):
   
     bone_ik.rotation_mode = rot_mod
     return dv
-    
+
+
 def find_min_range(bone_ik,bone_fk,f=tail_distance,delta=pi/4):
     """ finds the range where lies the minimum of function f applied on bone_ik and bone_fk
         at a certain angle.
@@ -91,6 +93,7 @@ def find_min_range(bone_ik,bone_fk,f=tail_distance,delta=pi/4):
     #         return (angle-delta,angle+delta)
     #     else:
     #         angle=angle+delta
+
 
 def ternarySearch(f, left, right, bone_ik, bone_fk, absolutePrecision):
     """
@@ -225,6 +228,7 @@ def match_pose_scale(pose_bone, target_bone):
     bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.object.mode_set(mode='POSE')
 
+
 def correct_rotation(bone_ik, bone_fk):
     """ Corrects the ik rotation in ik2fk snapping functions
     """
@@ -241,6 +245,7 @@ def correct_rotation(bone_ik, bone_fk):
 ##############################
 ## IK/FK snapping functions ##
 ##############################
+
 
 def match_pole_target(ik_first, ik_last, pole, match_bone, length):
     """ Places an IK chain's pole target to match ik_first's

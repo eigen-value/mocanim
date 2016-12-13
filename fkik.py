@@ -63,47 +63,89 @@ def FktoIkPitchipoy(rig,scn, window='ALL'):
         frames = [f for f in frames if f in range(scn.MocanimTransferStartFrame, scn.MocanimTransferEndFrame+1)]
     elif window == 'CURRENT':
         frames = [scn.frame_current]
-    
-    for f in frames:
-        scn.frame_set(f)
-        if scn.MocanimFkIkArms:
-            for suffix in [".L", ".R"]:
-                uarm  = "upper_arm_fk"+suffix
-                farm  = "forearm_fk"+suffix
-                hand  = "hand_fk"+suffix
-                uarmi = "upper_arm_ik"+suffix
-                farmi = "MCH-upper_arm_ik"+suffix
-                handi = "hand_ik"+suffix
+    else:
+        frames = [scn.frame_current]
 
+    pbones = rig.pose.bones
+    arm = rig.data
+
+    if scn.MocanimFkIkArms:
+
+        arm.layers[7] = True    # enable visualization of corresponding layer
+        arm.layers[10] = True
+
+        for suffix in [".L", ".R"]:
+            uarm  = "upper_arm_fk"+suffix
+            farm  = "forearm_fk"+suffix
+            hand  = "hand_fk"+suffix
+            uarmi = "upper_arm_ik"+suffix
+            farmi = "MCH-upper_arm_ik"+suffix
+            handi = "hand_ik"+suffix
+
+            if scn.MocanimTransferOnlySelected:
+                if pbones[uarmi].bone.select or pbones[farmi].bone.select or pbones[handi].bone.select:
+                    pbones[uarmi].bone.select = True
+                    pbones[farmi].bone.select = True
+                    pbones[handi].bone.select = True
+
+            else:
+                    pbones[uarmi].bone.select = True
+                    pbones[farmi].bone.select = True
+                    pbones[handi].bone.select = True
+
+            for f in frames:
+                scn.frame_set(f)
                 fk = [uarm,farm,hand]
                 ik = [uarmi,farmi,handi]
                 ik2fk_arm(rig, fk, ik)
+
+                bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_VisualLocRot')
+                bpy.ops.anim.keyframe_insert_menu(type='Scaling')
 
                 # insertKeyFrame(rig.pose.bones[uarmi])
                 # insertKeyFrame(rig.pose.bones[farmi])
                 # insertKeyFrame(rig.pose.bones[handi])
 
-                bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_VisualLocRot')
-                bpy.ops.anim.keyframe_insert_menu(type='Scaling')
-                
-        if scn.MocanimFkIkLegs:
-            for suffix in [".L", ".R"]:
-                thigh  = "thigh_fk"+suffix
-                shin   = "shin_fk"+suffix
-                foot   = "foot_fk"+suffix
-                mfoot  = "MCH-foot_fk"+suffix
-                thighi = "thigh_ik"+suffix
-                shini  = "MCH-thigh_ik"+suffix
-                footi  = "foot_ik"+suffix
-                footroll = "foot_heel_ik"+suffix
-                mfooti = "MCH-thigh_ik_target"+suffix
+    if scn.MocanimFkIkLegs:
 
+        arm.layers[13] = True    # enable visualization of corresponding layer
+        arm.layers[16] = True
+
+        for suffix in [".L", ".R"]:
+            thigh  = "thigh_fk"+suffix
+            shin   = "shin_fk"+suffix
+            foot   = "foot_fk"+suffix
+            mfoot  = "MCH-foot_fk"+suffix
+            thighi = "thigh_ik"+suffix
+            shini  = "MCH-thigh_ik"+suffix
+            footi  = "foot_ik"+suffix
+            footroll = "foot_heel_ik"+suffix
+            mfooti = "MCH-thigh_ik_target"+suffix
+
+            if scn.MocanimTransferOnlySelected:
+
+                if pbones[thighi].bone.select or pbones[shini].bone.select or pbones[footi].bone.select or pbones[footroll].bone.select:
+                    pbones[thighi].bone.select = True
+                    pbones[shini].bone.select = True
+                    pbones[footi].bone.select = True
+                    pbones[footroll].bone.select = True
+            else:
+                    pbones[thighi].bone.select = True
+                    pbones[shini].bone.select = True
+                    pbones[footi].bone.select = True
+                    pbones[footroll].bone.select = True
+
+            for f in frames:
+                scn.frame_set(f)
                 fk = [thigh,shin,mfoot,foot]
                 ik = [thighi,shini,footi,footroll,mfooti]
-                
+
                 rig.pose.bones["MCH-thigh_parent"+suffix]["IK/FK"] = 1.0
                 updateView3D()
                 ik2fk_leg(rig, fk, ik)
+
+                bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_VisualLocRot')
+                bpy.ops.anim.keyframe_insert_menu(type='Scaling')
 
                 # insertKeyFrame(rig.pose.bones[thighi])
                 # insertKeyFrame(rig.pose.bones[shini])
@@ -111,9 +153,7 @@ def FktoIkPitchipoy(rig,scn, window='ALL'):
                 # insertKeyFrame(rig.pose.bones[footroll])
                 # insertKeyFrame(rig.pose.bones[mfooti])
 
-                bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_VisualLocRot')
-                bpy.ops.anim.keyframe_insert_menu(type='Scaling')
-        #bpy.ops.nla.bake(frame_start=f, frame_end=f, step=1, only_selected=scn.MocanimTransferOnlySelected, visual_keying=True, clear_constraints=False, clear_parents=False, use_current_action= True, bake_types={'POSE'})
+                #bpy.ops.nla.bake(frame_start=f, frame_end=f, step=1, only_selected=scn.MocanimTransferOnlySelected, visual_keying=True, clear_constraints=False, clear_parents=False, use_current_action= True, bake_types={'POSE'})
 
     for suffix in [".L", ".R"]:
         if scn.MocanimFkIkArms:
@@ -131,37 +171,74 @@ def IktoFkPitchipoy(rig,scn, window='ALL'):
         frames = [f for f in frames if f in range(scn.MocanimTransferStartFrame, scn.MocanimTransferEndFrame+1)]
     elif window == 'CURRENT':
         frames = [scn.frame_current]
-    
-    for f in frames:
-        scn.frame_set(f)
-        if scn.MocanimFkIkArms:
-            for suffix in [".L", ".R"]:
-                uarm  = "upper_arm_fk"+suffix
-                farm  = "forearm_fk"+suffix
-                hand  = "hand_fk"+suffix
-                uarmi = "upper_arm_ik"+suffix
-                farmi = "MCH-upper_arm_ik"+suffix
-                handi = "hand_ik"+suffix
+    else:
+        frames = [scn.frame_current]
+
+    pbones = rig.pose.bones
+    arm = rig.data
+
+    if scn.MocanimFkIkArms:
+
+        arm.layers[8] = True    # enable visualization of corresponding layer
+        arm.layers[11] = True
+
+        for suffix in [".L", ".R"]:
+            uarm  = "upper_arm_fk"+suffix
+            farm  = "forearm_fk"+suffix
+            hand  = "hand_fk"+suffix
+            uarmi = "upper_arm_ik"+suffix
+            farmi = "MCH-upper_arm_ik"+suffix
+            handi = "hand_ik"+suffix
+
+            if scn.MocanimTransferOnlySelected:
+                if pbones[uarm].bone.select or pbones[farm].bone.select or pbones[hand].bone.select:
+                    pbones[uarm].bone.select = True
+                    pbones[farm].bone.select = True
+                    pbones[hand].bone.select = True
+            else:
+                    pbones[uarm].bone.select = True
+                    pbones[farm].bone.select = True
+                    pbones[hand].bone.select = True
+
+            for f in frames:
+                scn.frame_set(f)
 
                 fk = [uarm,farm,hand]
                 ik = [uarmi,farmi,handi]
                 fk2ik_arm(rig, fk, ik)
 
+                bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_VisualLocRot')
+                bpy.ops.anim.keyframe_insert_menu(type='Scaling')
                 # insertKeyFrame(rig.pose.bones[uarm])
                 # insertKeyFrame(rig.pose.bones[farm])
                 # insertKeyFrame(rig.pose.bones[hand])
 
-        if scn.MocanimFkIkLegs:
-            for suffix in [".L", ".R"]:
-                thigh  = "thigh_fk"+suffix
-                shin   = "shin_fk"+suffix
-                foot   = "foot_fk"+suffix
-                mfoot  = "MCH-foot_fk"+suffix
-                thighi = "thigh_ik"+suffix
-                shini  = "MCH-thigh_ik"+suffix
-                footi  = "MCH-thigh_ik_target"+suffix
-                mfooti = "MCH-thigh_ik_target"+suffix
+    if scn.MocanimFkIkLegs:
+        arm.layers[14] = True    # enable visualization of corresponding layer
+        arm.layers[17] = True
 
+        for suffix in [".L", ".R"]:
+            thigh  = "thigh_fk"+suffix
+            shin   = "shin_fk"+suffix
+            foot   = "foot_fk"+suffix
+            mfoot  = "MCH-foot_fk"+suffix
+            thighi = "thigh_ik"+suffix
+            shini  = "MCH-thigh_ik"+suffix
+            footi  = "MCH-thigh_ik_target"+suffix
+            mfooti = "MCH-thigh_ik_target"+suffix
+
+            if scn.MocanimTransferOnlySelected:
+                if pbones[thigh].bone.select or pbones[shin].bone.select or pbones[foot].bone.select:
+                    pbones[thigh].bone.select = True
+                    pbones[shin].bone.select = True
+                    pbones[foot].bone.select = True
+            else:
+                    pbones[thigh].bone.select = True
+                    pbones[shin].bone.select = True
+                    pbones[foot].bone.select = True
+
+            for f in frames:
+                scn.frame_set(f)
                 fk = [thigh,shin,foot,mfoot]
                 ik = [thighi,shini,footi,mfooti]
                 fk2ik_leg(rig, fk, ik)
@@ -170,9 +247,9 @@ def IktoFkPitchipoy(rig,scn, window='ALL'):
                 # insertKeyFrame(rig.pose.bones[shin])
                 # insertKeyFrame(rig.pose.bones[foot])
                 # insertKeyFrame(rig.pose.bones[mfoot])
-        bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_VisualLocRot')
-        bpy.ops.anim.keyframe_insert_menu(type='Scaling')
-        #bpy.ops.nla.bake(frame_start=f, frame_end=f, step=1, only_selected=scn.MocanimTransferOnlySelected, visual_keying=True, clear_constraints=False, clear_parents=False, use_current_action= True, bake_types={'POSE'})
+                bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_VisualLocRot')
+                bpy.ops.anim.keyframe_insert_menu(type='Scaling')
+                #bpy.ops.nla.bake(frame_start=f, frame_end=f, step=1, only_selected=scn.MocanimTransferOnlySelected, visual_keying=True, clear_constraints=False, clear_parents=False, use_current_action= True, bake_types={'POSE'})
 
 
     for suffix in [".L", ".R"]:
